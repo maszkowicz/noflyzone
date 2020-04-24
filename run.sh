@@ -26,6 +26,9 @@ do
     sox "$f" "$f.effect.wav" reverb 10 sinc 400-5005
 done
 
+# remove some unneeded files
+rm recordings/*.noise.wav.effect.wav
+
 # stitch recordings together
 rm concatlist.txt
 for f in recordings/*.effect.wav
@@ -34,6 +37,23 @@ do
 done
 
 ffmpeg -y -f concat -safe 0 -i concatlist.txt -c copy audiotrack.wav
+
+# kill previous stream
+pkill -9 ffmpeg
+
+# stitch recordings together
+rm concatlist.txt
+for f in recordings/*.noise.wav
+do
+  echo "file '$f'" >> concatlist.txt
+done
+
+ffmpeg -y -f concat -safe 0 -i concatlist.txt -c copy noisetrack.wav
+
+# ffmpeg -y -f lavfi -i color=c=black:s=1280x720:r=5 -i audiotrack.wav -crf 0 -shortest live.mp4
+
+# kill previous stream
+pkill -9 ffmpeg
 
 # ffmpeg -y -f lavfi -i color=c=black:s=1280x720:r=5 -i audiotrack.wav -crf 0 -shortest live.mp4
 

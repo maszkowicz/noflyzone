@@ -14,6 +14,10 @@ import requests
 from google.cloud import texttospeech
 client = texttospeech.TextToSpeechClient()
 
+# imports related to sound generation
+import audiofile
+import numpy as np
+from scipy import signal
 
 HIDE_DATE = True
 
@@ -142,6 +146,32 @@ def synthesize_ms(text, outname):
 
     return outname
 
+def make_noise(text_length,filmename):
+    # checking audio file to match with
+    nb_samples = audiofile.samples(filmename)
+    sampling_rate = audiofile.sampling_rate(filmename)  # in Hz
+
+    # Generate random logarithmic noise
+    noise = np.random.lognormal(0, 1, nb_samples)
+    noise /= np.amax(np.abs(noise))
+
+    # Filter with bandpass filter
+    nyq = 0.5 * sampling_rate
+    low = text_length / nyq
+    high = (50 + text_length) / nyq
+    order = 1
+    b, a = signal.butter(order, [low, high], btype='band')
+    filtered_noise = signal.lfilter(b, a, noise)
+
+    # create Gaussian enveloppe
+    t = np.linspace(start=-0.5,stop=0.5, num=nb_samples, endpoint=False)
+    i, e = signal.gausspulse(t, fc=5, retenv=True, bwr=-6.0)
+    out_signal = np.multiply(filtered_noise, e)
+    out_signal *= 30
+
+    # write audio file
+    audiofile.write(filmename + '.noise.wav', out_signal, sampling_rate)
+    print("text length was :",text_length)
 
 def main():
 
@@ -169,6 +199,8 @@ def main():
 
         # UNcomment the following should you wish to use the microsoft API.
         # time.sleep(3)
+
+        make_noise(len(text),outname)
 
 
 if __name__ == "__main__":
